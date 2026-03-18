@@ -1,3 +1,46 @@
 spring:
   application:
     name: payments
+  datasource:
+    url: jdbc:postgresql://${PGHOST}:${PGPORT}/${PGDATABASE}?sslmode=require
+    username: ${PGUSER}
+    password: ${PGPASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update   # create | create-drop | validate | none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${PORT:8080}
+
+jwt:
+  secret: ${JWT_SECRET}
+
+stripe:
+  webhook:
+    secret: ${WEBHOOK_SECRET}
+  secret:
+    key: ${STRIPE_SECRET}
+stripe-urls:
+  success-payment:
+    path: ${SUCCESS_PAYMENT_PATH}
+  failure-payment:
+    path: ${FAILURE_PAYMENT_PATH}
+  change-card-return:
+    path: ${CANGE_CARDS_RETURN_PATH}
+
+without-security:
+  swagger-ui:
+    path: ${SWAGGER_UI_PATH}
+  swagger-ui-enpoints:
+    path: ${SWAGGER_ENDPOINTS_PATH}
+  api-docs:
+    path: ${API_DOCS_PATH}
+  stripe-webhook:
+    path: ${STRIPE_WEBHOOK_PATH}
