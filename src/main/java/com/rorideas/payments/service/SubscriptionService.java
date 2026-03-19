@@ -214,10 +214,21 @@ public class SubscriptionService {
         Optional<Subscription> subscriptionUser = subscriptionRepository.findByUserId(Long.valueOf(userId));
         subscriptionUser.orElseThrow(() -> new Exception(Constants.NOT_FOUND_SUBSCRIPTION));
 
+        boolean hasPay = false;
+        String latestInvoiceId = subscription.getLatestInvoice();
+        if (Objects.isNull(latestInvoiceId)) {
+            hasPay = true;
+        }else{
+            Invoice invoice = Invoice.retrieve(latestInvoiceId);
+            if (invoice.getAmountDue()==0||Constants.PAID_STATUS.equals(invoice.getStatus())) {
+                hasPay = true;
+            }
+        }
+
         String newPriceId =
                 subscription.getItems().getData().get(0).getPrice().getId();
         boolean samePlan = subscriptionUser.get().getPriceId().equals(newPriceId);
-        updatedSubscription(subscription.getId(), subscription.getCancelAtPeriodEnd()&&samePlan,samePlan?subscriptionUser.get().getPriceId():newPriceId);
+        updatedSubscription(subscription.getId(), subscription.getCancelAtPeriodEnd()&&samePlan,samePlan?subscriptionUser.get().getPriceId():newPriceId,hasPay);
     }
 
     /**
@@ -372,12 +383,14 @@ public class SubscriptionService {
 
     /**
      * Updates the subscription in the local database based on the provided Stripe subscription ID, cancellation status at the end of the period, and new price ID. This method retrieves the subscription, updates its status based on whether it is set to cancel at the end of the period or not, updates the price ID, and saves the updated subscription back to the database. This is typically called when a subscription is updated either by the user or through a Stripe webhook event.
-     * @param stripeId the ID of the Stripe subscription associated with the subscription to be updated
+     *
+     * @param stripeId          the ID of the Stripe subscription associated with the subscription to be updated
      * @param cancelAtEndPeriod a boolean flag indicating whether the subscription is set to cancel at the end of the current billing period, which affects how the subscription status is updated
-     * @param priceId the ID of the new Stripe price associated with the subscription plan, which is updated in the subscription record
+     * @param priceId           the ID of the new Stripe price associated with the subscription plan, which is updated in the subscription record
+     * @param hasPay
      * @throws Exception if there is an error finding the subscription in the local database or if the subscription is not found
      */
-    public void updatedSubscription(String stripeId, boolean cancelAtEndPeriod,String priceId) throws Exception {
+    public void updatedSubscription(String stripeId, boolean cancelAtEndPeriod, String priceId, boolean hasPay) throws Exception {
         log.info("updatedSubscription");
         Optional<Subscription> sub =
                 subscriptionRepository.findByStripeSubscriptionId(stripeId);
@@ -387,8 +400,13 @@ public class SubscriptionService {
             log.info(Constants.CANCEL_AT_END_PERIOD);
             sub.get().setStatus(PaymentStatus.PENDIENTE_CANCELAR);
         }else {
-            log.info(Constants.PENDING_CONFIRM_SUBSCRIPTION);
-            sub.get().setStatus(PaymentStatus.PENDIENTE_CONFIRMAR);
+            if (hasPay) {
+                log.info(Constants.PAY_CONFIRM_SUBSCRIPTION);
+                sub.get().setStatus(PaymentStatus.PAGADO);
+            }else {
+                log.info(Constants.PENDING_CONFIRM_SUBSCRIPTION);
+                sub.get().setStatus(PaymentStatus.PENDIENTE_CONFIRMAR);
+            }
         }
         sub.get().setPriceId(priceId);
         subscriptionRepository.save(sub.get());

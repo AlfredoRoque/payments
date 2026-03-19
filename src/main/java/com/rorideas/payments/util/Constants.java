@@ -22,6 +22,7 @@ public class Constants {
     public static final String CANCEL_SUBSCRIPTION = "cancel subscription";
     public static final String CANCEL_AT_END_PERIOD = "cancel at end period";
     public static final String PENDING_CONFIRM_SUBSCRIPTION = "pending to confirm subscription";
+    public static final String PAY_CONFIRM_SUBSCRIPTION = "subscription has been paid";
     public static final String PAYMENT_SUBSCRIPTION_FAILED = "Payment subscription failed";
 
     //Stripe events
